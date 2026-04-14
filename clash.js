@@ -12,9 +12,7 @@ function main(config) {
     const ratio = parseFloat(match?.[1] || match?.[2] || match?.[3]);
     return Number.isFinite(ratio) ? ratio : null;
   };
-  const getLowRatioGroupName = regionName => regionName.endsWith("节点")
-    ? regionName.replace(/节点$/, `${LOW_RATIO_THRESHOLD}x及以下`)
-    : `${regionName}${LOW_RATIO_THRESHOLD}x及以下`;
+  const getLowRatioGroupName = regionName => `${regionName}低倍率`;
 
   const filteredProxies = originalProxies
     .filter(p => p?.name && !blackListRegex.test(p.name))
@@ -29,11 +27,11 @@ function main(config) {
   }));
 
   const REGIONS = [
-    { name: "美国节点", pattern: "美国|美|US|USA|UnitedStates|United States|纽约|NewYork|NYC|JFK|洛杉矶|LosAngeles|LAX|旧金山|SanFrancisco|SFO|圣何塞|SanJose|SJC|西雅图|Seattle|SEA|芝加哥|Chicago|ORD|达拉斯|Dallas|DFW|硅谷|SiliconValley", icon: "United_States.png" },
-    { name: "日本节点", pattern: "日本|日|JP|JPN|Japan|东京|Tokyo|TYO|NRT|HND|大阪|Osaka|KIX", icon: "Japan.png" },
-    { name: "狮城节点", pattern: "新加坡|狮城|SG|SGP|Singapore|SIN", icon: "Singapore.png" },
-    { name: "香港节点", pattern: "香港|港|HK|HKG|HongKong|Hong Kong", icon: "Hong_Kong.png" },
-    { name: "台湾节点", pattern: "台湾|台|TW|TWN|Taiwan|台北|Taipei|TPE|新北|NewTaipei", icon: "Taiwan.png" }
+    { name: "美国", pattern: "美国|美|US|USA|UnitedStates|United States|纽约|NewYork|NYC|JFK|洛杉矶|LosAngeles|LAX|旧金山|SanFrancisco|SFO|圣何塞|SanJose|SJC|西雅图|Seattle|SEA|芝加哥|Chicago|ORD|达拉斯|Dallas|DFW|硅谷|SiliconValley", icon: "United_States.png" },
+    { name: "日本", pattern: "日本|日|JP|JPN|Japan|东京|Tokyo|TYO|NRT|HND|大阪|Osaka|KIX", icon: "Japan.png" },
+    { name: "香港", pattern: "香港|港|HK|HKG|HongKong|Hong Kong", icon: "Hong_Kong.png" },
+    { name: "台湾", pattern: "台湾|台|TW|TWN|Taiwan|台北|Taipei|TPE|新北|NewTaipei", icon: "Taiwan.png" },
+    { name: "新加坡", pattern: "新加坡|狮城|SG|SGP|Singapore|SIN", icon: "Singapore.png" }
   ];
 
   const activeRegions = REGIONS.map(region => {
@@ -48,18 +46,32 @@ function main(config) {
     };
   }).filter(r => r.proxies.length > 0);
 
-  const selectionNames = activeRegions.reduce((names, region) => {
-    names.push(region.name);
+  const selectionNames = activeRegions.flatMap(region => {
+    const names = [region.name];
     if (region.lowRatioProxies.length > 0) names.push(getLowRatioGroupName(region.name));
     return names;
-  }, []);
+  });
+
+  const orderedRegionGroups = activeRegions.flatMap(region => {
+    const groups = [
+      { name: region.name, icon: `${ICON_BASE}${region.icon}`, type: "url-test", proxies: region.proxies, interval: 300, tolerance: 50 }
+    ];
+    if (region.lowRatioProxies.length > 0) {
+      groups.push({
+        name: getLowRatioGroupName(region.name),
+        icon: `${ICON_BASE}${region.icon}`,
+        type: "url-test",
+        proxies: region.lowRatioProxies,
+        interval: 300,
+        tolerance: 50
+      });
+    }
+    return groups;
+  });
 
   const proxyGroups = [
-    { name: "节点选择", icon: `${ICON_BASE}Proxy.png`, type: "select", proxies: [...selectionNames, "手动切换"] },
-    ...activeRegions.map(r => ({ name: r.name, icon: `${ICON_BASE}${r.icon}`, type: "url-test", proxies: r.proxies, interval: 300, tolerance: 50 })),
-    ...activeRegions
-      .filter(r => r.lowRatioProxies.length > 0)
-      .map(r => ({ name: getLowRatioGroupName(r.name), icon: `${ICON_BASE}${r.icon}`, type: "url-test", proxies: r.lowRatioProxies, interval: 300, tolerance: 50 })),
+    { name: "节点选择", icon: `${ICON_BASE}Proxy.png`, type: "select", proxies: selectionNames },
+    ...orderedRegionGroups,
     { name: "手动切换", icon: `${ICON_BASE}Available.png`, "include-all": true, type: "select" },
     { name: "GLOBAL", icon: `${ICON_BASE}Global.png`, type: "select", proxies: ["节点选择", ...selectionNames, "手动切换", "DIRECT"] }
   ];
