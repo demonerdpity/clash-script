@@ -1,17 +1,25 @@
 function main(config) {
   const ICON_BASE = "https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/";
   const RULE_BASE = "https://cdn.jsdelivr.net/gh/ACL4SSR/ACL4SSR@master/Clash/";
+  const LOW_RATIO_THRESHOLD = 0.5;
 
   const ratioRegex = /(?:\[(\d+(?:\.\d+)?)\s*(?:x|X|×)\]|(\d+(?:\.\d+)?)\s*(?:x|X|×|倍)|(?:x|X|×|倍)\s*(\d+(?:\.\d+)?))/i;
   const blackListRegex = /(?<!集)群|邀请|返利|官方|网址|订阅|购买|续费|剩余|到期|过期|流量|备用|邮箱|客服|联系|工单|倒卖|防止|梯子|tg|发布|重置/i;
 
   const originalProxies = config.proxies || [];
+  const getProxyRatio = name => {
+    const match = name.match(ratioRegex);
+    const ratio = parseFloat(match?.[1] || match?.[2] || match?.[3]);
+    return Number.isFinite(ratio) ? ratio : null;
+  };
+  const getLowRatioGroupName = regionName => regionName.endsWith("节点")
+    ? regionName.replace(/节点$/, `${LOW_RATIO_THRESHOLD}x及以下`)
+    : `${regionName}${LOW_RATIO_THRESHOLD}x及以下`;
 
-  const filteredProxies = originalProxies.filter(p => {
-    if (!p?.name || blackListRegex.test(p.name)) return false;
-    const match = p.name.match(ratioRegex);
-    return !(match && parseFloat(match[1] || match[2] || match[3]) > 3.0);
-  });
+  const filteredProxies = originalProxies
+    .filter(p => p?.name && !blackListRegex.test(p.name))
+    .map(p => ({ ...p, __ratio: getProxyRatio(p.name) }))
+    .filter(p => !(p.__ratio !== null && p.__ratio > 3.0));
 
   if (!filteredProxies.length && !originalProxies.length) return config;
 
@@ -30,16 +38,30 @@ function main(config) {
 
   const activeRegions = REGIONS.map(region => {
     const regex = new RegExp(region.pattern.split('|').map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'i');
-    return { ...region, proxies: proxiesWithNorm.filter(p => regex.test(p.__normName)).map(p => p.name) };
+    const matchedProxies = proxiesWithNorm.filter(p => regex.test(p.__normName));
+    return {
+      ...region,
+      proxies: matchedProxies.map(p => p.name),
+      lowRatioProxies: matchedProxies
+        .filter(p => p.__ratio !== null && p.__ratio <= LOW_RATIO_THRESHOLD)
+        .map(p => p.name)
+    };
   }).filter(r => r.proxies.length > 0);
 
-  const regionNames = activeRegions.map(r => r.name);
+  const selectionNames = activeRegions.reduce((names, region) => {
+    names.push(region.name);
+    if (region.lowRatioProxies.length > 0) names.push(getLowRatioGroupName(region.name));
+    return names;
+  }, []);
 
   const proxyGroups = [
-    { name: "节点选择", icon: `${ICON_BASE}Proxy.png`, type: "select", proxies: [...regionNames, "手动切换"] },
+    { name: "节点选择", icon: `${ICON_BASE}Proxy.png`, type: "select", proxies: [...selectionNames, "手动切换"] },
     ...activeRegions.map(r => ({ name: r.name, icon: `${ICON_BASE}${r.icon}`, type: "url-test", proxies: r.proxies, interval: 300, tolerance: 50 })),
+    ...activeRegions
+      .filter(r => r.lowRatioProxies.length > 0)
+      .map(r => ({ name: getLowRatioGroupName(r.name), icon: `${ICON_BASE}${r.icon}`, type: "url-test", proxies: r.lowRatioProxies, interval: 300, tolerance: 50 })),
     { name: "手动切换", icon: `${ICON_BASE}Available.png`, "include-all": true, type: "select" },
-    { name: "GLOBAL", icon: `${ICON_BASE}Global.png`, type: "select", proxies: ["节点选择", ...regionNames, "手动切换", "DIRECT"] }
+    { name: "GLOBAL", icon: `${ICON_BASE}Global.png`, type: "select", proxies: ["节点选择", ...selectionNames, "手动切换", "DIRECT"] }
   ];
   config["proxy-groups"] = proxyGroups;
 
