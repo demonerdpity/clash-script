@@ -6,6 +6,12 @@ function main(config) {
   const MINOR_GROUP_NAME = "小众节点";
   const MANUAL_GROUP_NAME = "手动切换";
   const OTHER_REGION_NAME = "其他地区";
+  const CUSTOM_DIRECT_HOSTS = [
+    "https://cdk.hybgzs.com/",
+    "ai.hybgzs.com",
+    ".bilibili.com"
+  ];
+  const CUSTOM_PROXY_HOSTS = [];
 
   const ratioRegex = /(?:\[(\d+(?:\.\d+)?)\s*(?:x|X|×)\]|(\d+(?:\.\d+)?)\s*(?:x|X|×|倍)|(?:x|X|×|倍)\s*(\d+(?:\.\d+)?))/i;
   const blackListRegex = /(?<!集)群|邀请|返利|官方|网址|订阅|购买|续费|剩余|到期|过期|流量|备用|邮箱|客服|联系|工单|倒卖|防止|梯子|tg|发布|重置/i;
@@ -209,6 +215,19 @@ function main(config) {
     for (const [flag, code] of Object.entries(FLAG_TO_CODE)) normalized = normalized.split(flag).join(code);
     return normalized;
   };
+  const normalizeRuleHost = value => String(value || "")
+    .trim()
+    .replace(/^[a-z]+:\/\//i, "")
+    .split(/[/?#]/, 1)[0]
+    .replace(/:\d+$/, "");
+  const buildCustomHostRules = (hosts, target) => hosts
+    .map(normalizeRuleHost)
+    .filter(Boolean)
+    .map(host => {
+      if (host.startsWith("*.")) return `DOMAIN-SUFFIX,${host.slice(2)},${target}`;
+      if (host.startsWith(".")) return `DOMAIN-SUFFIX,${host.slice(1)},${target}`;
+      return `DOMAIN,${host},${target}`;
+    });
   const getProxyRatio = name => {
     const match = name.match(ratioRegex);
     const ratio = parseFloat(match?.[1] || match?.[2] || match?.[3]);
@@ -353,7 +372,11 @@ function main(config) {
 
   const validTargets = new Set(["DIRECT", "REJECT", "REJECT-DROP", "PASS", ...proxyGroups.map(group => group.name), ...originalProxies.map(proxy => proxy.name)]);
 
-  const customRules = (config.rules || [])
+  const customRules = [
+    ...buildCustomHostRules(CUSTOM_DIRECT_HOSTS, "DIRECT"),
+    ...buildCustomHostRules(CUSTOM_PROXY_HOSTS, PRIMARY_GROUP_NAME),
+    ...(config.rules || [])
+  ]
     .filter(rule => !rule.startsWith("MATCH,"))
     .map(rule => {
       const parts = rule.split(",");
