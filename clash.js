@@ -13,7 +13,6 @@ function main(config) {
     ".anyrouter.top",
     ".icoe.pp.ua",
     ".elysiver.h-e.top",
-    ".42w.shop",
     ".ark717.com",
     ".hlwy.org",
     ".jojocode.com",
