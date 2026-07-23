@@ -7,9 +7,22 @@ function main(config) {
   const MANUAL_GROUP_NAME = "手动切换";
   const OTHER_REGION_NAME = "其他地区";
   const CUSTOM_DIRECT_HOSTS = [
-    "https://cdk.hybgzs.com/",
-    "ai.hybgzs.com",
-    ".bilibili.com"
+    ".hybgzs.com",
+    ".bilibili.com",
+    ".muyuan.do",
+    ".anyrouter.top",
+    ".icoe.pp.ua",
+    ".elysiver.h-e.top",
+    ".42w.shop",
+    ".ark717.com",
+    ".hlwy.org",
+    ".jojocode.com",
+    ".shuaiapi.com",
+    ".4router.net",
+    ".shu26.cfd",
+    ".fastaitoken.com",
+    ".aihub.top",
+    ".xiaoheihe.cn"
   ];
   const CUSTOM_PROXY_HOSTS = [];
 
