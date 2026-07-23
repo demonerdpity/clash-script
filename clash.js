@@ -8,7 +8,18 @@ function main(config) {
   const OTHER_REGION_NAME = "其他地区";
   const CUSTOM_DIRECT_HOSTS = [
     ".hybgzs.com",
+    ".acg.tv",
+    ".b23.tv",
+    ".biliapi.com",
+    ".biliapi.net",
     ".bilibili.com",
+    ".bilibili.tv",
+    ".bilicdn1.com",
+    ".bilivideo.cn",
+    ".bilivideo.com",
+    ".bilivideo.cc",
+    ".hdslb.com",
+    ".im9.com",
     ".muyuan.do",
     ".anyrouter.top",
     ".icoe.pp.ua",
